@@ -41,8 +41,6 @@ while True:
         # 読み取ったデータがないときは例外処理
         if data_length == 0:
             raise Exception('No data to read from client.')
-        
-        
 
         # クライアントから受け取ったファイルをtemp配下にコピーする
         with open(os.path.join(dpath, filename), 'wb+') as f:

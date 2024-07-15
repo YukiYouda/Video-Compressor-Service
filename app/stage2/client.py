@@ -20,21 +20,43 @@ except socket.error as err:
     print(err)
     sys.exit(1)
 
+# サーバーから受信したファイルをoutputフォルダに格納する
+dpath = 'output'
+if not os.path.exists(dpath):
+    os.makedirs(dpath)
+
 try:
     # 操作内容の入力(0:圧縮、1:解像度の変更、2:アスペクト比の変更、3:音声に変換、4:切り取り)
     operation = int(input('動画処理内容を入力してください(0:圧縮、1:解像度の変更、2:アスペクト比の変更、3:音声に変換、4:切り取り) : '))
 
+    # 圧縮のとき
+    if operation == 0:
+        compression_dict = {0 : 0}
+        json_bits = json.dumps(compression_dict).encode('utf-8')
+
     # 解像度の変更のとき
-    resolution =''
     if operation == 1:
         resolution = input('変更する解像度を入力してください : ')
-    resolution_dict = {1 : resolution}
-    json_bits = json.dumps(resolution_dict).encode('utf-8')
+        resolution_dict = {1 : resolution}
+        json_bits = json.dumps(resolution_dict).encode('utf-8')
 
     # アスペクト比の変更のとき
+    if operation == 2:
+        aspect_ratio = input('変更するアスペクト比を入力してください : ')
+        aspect_ratio_dict = {2 : aspect_ratio}
+        json_bits = json.dumps(aspect_ratio_dict).encode('utf-8')
 
-    # 切り抜きのとき
+    # 動画をオーディオに変換のとき
+    if operation == 3:
+        audio_dict = {3 : 3}
+        json_bits = json.dumps(audio_dict).encode('utf-8')
 
+    # 動画を切り取ってGIF形式に変換するとき
+    if operation == 4:
+        start_time = input('開始時間を入力してください : ')
+        duration = input('切り取る時間を入力してください : ')
+        clipping_dict = {4 : [start_time, duration]}
+        json_bits = json.dumps(clipping_dict).encode('utf-8')
 
     # アップロードするファイルの入力
     filepath = input('アップロードするファイルを入力してください: ')
@@ -67,12 +89,28 @@ try:
         # メディアタイプの送信
         sock.send(media_type_bits)
 
-        # 一度に1460バイトずつ読み出し、送信する
-        data = f.read(1460)
+        # 一度に100000バイトずつ読み出し、送信する
+        data = f.read(100000)
         while data:
             print("Sending...")
             sock.send(data)
-            data = f.read(1460)
+            data = f.read(100000)
+
+        # サーバーから受け取ったファイルをoutput配下にコピーする
+        if operation == 3:
+            output_file_name = "output.mp3"
+        elif operation == 4:
+            output_file_name = "output.gif"
+        else:
+            output_file_name = "output" + media_type
+        buffer_size = 4096
+        with open(os.path.join(dpath, output_file_name), 'wb+') as f:
+            while True:
+                data = sock.recv(buffer_size)
+                if not data:
+                    break
+                f.write(data)
+            print('output download completed')
 
 finally:
     print('closing socket')
